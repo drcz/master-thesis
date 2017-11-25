@@ -60,7 +60,7 @@
 [e.g. (result program-with-closure) ===> 5]
 
 ;;; not good TODO
-[e.g. (passing-program evil-closures)
+[e.g. (passing-program program-with-closure)
       ===>
       ((define pass-mk-adder (lambda (x return)
                                (return (lambda (y return)
@@ -74,9 +74,43 @@
 ; (...)
 
 [e.g.
- (passing-program (passing-program '((define sq (lambda (x) (* x x))) (sq 3))))
+ (begin
+   (original-name)
+   (passing-program `((define pass* (lambda (x y K) (K (* x y))))
+                      . ,(passing-program
+                          '((define sq (lambda (x) (* x x))) (sq 3))))))
  ===>
- ((define pass-pass-sq
-    (lambda (x return return)
-      (pass-pass* x x return return)))
-  (pass-pass-sq 3 exit exit))]
+ ((define pass-pass* (lambda (x y K return)
+                       (pass* x y
+                              (lambda (x*y/1) (pass-K x*y/1 return)))))
+  (define pass-pass-sq (lambda (x return return)
+                         (pass-pass* x x return return)))
+ (pass-pass-sq 3 exit exit))]
+;; nie no...
+[e.g.
+ (begin
+   (original-name)
+   (passing-program '((define K* (lambda (x y k) (k (* x y))))
+                      (define sqK (lambda (x return) (K* x x return)))
+                      (sqK 3 exit)))) 
+
+ ===> ((define pass-K*
+         (lambda (x y k return)
+           (pass* x y
+                  (lambda (x*y/1) (pass-k x*y/1 return)))))
+       (define pass-sqK
+         (lambda (x return return)
+           (pass-K* x x return return)))
+       (pass-sqK 3 exit exit))]
+
+;;; pass-k...?
+
+(original-name)
+[e.g.
+ (passing-program '((define f (lambda (a b c) (+ (* a b) c))) (f 1 2 3))) 
+ ===>
+ ((define pass-f (lambda (a b c return)
+                   (pass* a b
+                          (lambda (a*b/1) (pass+ a*b/1 c return)))))
+  (pass-f 1 2 3 exit))] ;;; piknie.
+
