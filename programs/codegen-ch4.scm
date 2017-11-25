@@ -1,7 +1,14 @@
 ;;; appendix E continued...
 (use-modules (grand scheme) (grand symbol) (srfi srfi-88))
+(add-to-load-path (getcwd))
 (include-from-path "assembler-ch3.scm")
 (include-from-path "cpsizer-ch4.scm")
+
+
+(define (primitive-passing-operator? operator) ;; ha!
+  (any (lambda ((primop passing-function))
+         (equal? operator passing-function))
+       primitive-operators))
 
 
 (define (passing-function-label name)
@@ -92,6 +99,7 @@
        (difference (union read-registers (used-registers rest))
                    (difference modified-registers read-registers))))))
 
+
 (define (passing-program->assembly program/CPS)
   (let (((('define names passing-functions)
           ...
@@ -131,7 +139,7 @@
          (call operator operands registers))))
 
     (define (call operator operands registers)
-      (cond ((primitive-operator? operator)
+      (cond ((primitive-passing-operator? operator)
              (call-primitive operator operands registers))
 
             ((defined-function? operator)
@@ -252,3 +260,13 @@
 (define (compile scheme-program)
   (assemble (passing-program->assembly
              (passing-program scheme-program))))
+
+
+[pretty-print
+ (compile '((define pow (lambda (m n)
+                          (if (= n 0) 1 (* m (pow m (- n 1))))))
+            (define !
+              (lambda (n)
+                (if (= n 0) 1 (* n (! (- n 1))))))
+            
+            (! (pow 2 3)))) ]
